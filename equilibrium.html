@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Equilibrium">
+<meta name="theme-color" content="#06060e">
+<meta name="description" content="Sistema de decisão baseado em neurociência">
+<title>Equilibrium</title>
+
+<!-- PWA Manifest inline -->
+<script>
+const manifestData = {
+  name: "Equilibrium",
+  short_name: "Equilibrium",
+  description: "Sistema psicológico de tomada de decisão",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#06060e",
+  theme_color: "#06060e",
+  orientation: "portrait",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%2306060e'/%3E%3Ccircle cx='256' cy='200' r='16' fill='%23c8a84b'/%3E%3Crect x='250' y='210' width='12' height='120' rx='6' fill='%231a1a2e'/%3E%3Crect x='100' y='194' width='312' height='12' rx='6' fill='%231e1e38'/%3E%3Cellipse cx='140' cy='300' rx='60' ry='18' fill='%230c0c1e' stroke='%23c8a84b' stroke-width='3'/%3E%3Cellipse cx='372' cy='280' rx='60' ry='18' fill='%23160808' stroke='%235b8dee' stroke-width='3'/%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+const manifestURL = URL.createObjectURL(blob);
+document.write('<link rel="manifest" href="' + manifestURL + '">');
+</script>
+
+<!-- Apple touch icon -->
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='36' fill='%2306060e'/%3E%3Ccircle cx='90' cy='72' r='7' fill='%23c8a84b'/%3E%3Crect x='87' y='76' width='6' height='52' rx='3' fill='%231a1a2e'/%3E%3Crect x='28' y='68' width='124' height='8' rx='4' fill='%231e1e38'/%3E%3Cellipse cx='48' cy='116' rx='26' ry='8' fill='%230c0c1e' stroke='%23c8a84b' stroke-width='2'/%3E%3Cellipse cx='132' cy='106' rx='26' ry='8' fill='%23160808' stroke='%235b8dee' stroke-width='2'/%3E%3Crect x='68' y='136' width='44' height='6' rx='3' fill='%230e0e1e'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #06060e;
+  --surface: #0c0c1a;
+  --border: rgba(255,255,255,0.06);
+  --border-hi: rgba(255,255,255,0.12);
+  --text: #d4d4e8;
+  --text-mid: #6868a0;
+  --text-dim: #2e2e50;
+  --gold: #c8a84b;
+  --gold-dim: rgba(200,168,75,0.12);
+  --blue: #5b8dee;
+  --blue-dim: rgba(91,141,238,0.12);
+  --red: #e05555;
+  --red-dim: rgba(224,85,85,0.1);
+  --green: #4ecb8d;
+  --green-dim: rgba(78,203,141,0.1);
+  --amber: #e09040;
+  --safe-top: env(safe-area-inset-top, 44px);
+  --safe-bot: env(safe-area-inset-bottom, 34px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Literata', Georgia, serif;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+::-webkit-scrollbar { display: none; }
+
+/* ── LAYOUT ── */
+#app {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  position: relative;
+}
+.screen {
+  display: none;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  flex-direction: column;
+  padding: 0 22px calc(32px + var(--safe-bot));
+  padding-top: calc(var(--safe-top) + 36px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.screen.active { display: flex; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp   { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:translateY(0) } }
+@keyframes fadeIn   { from { opacity:0 } to { opacity:1 } }
+@keyframes pop      { from { opacity:0; transform:scale(.93) } to { opacity:1; transform:scale(1) } }
+@keyframes shimmer  { 0%{background-position:-400% center} 100%{background-position:400% center} }
+@keyframes breathe  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+@keyframes pulse    { 0%,100%{opacity:.4} 50%{opacity:1} }
+@keyframes slideIn  { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+@keyframes cdBar    { from{width:100%} to{width:0%} }
+
+.fu { animation: fadeUp .45s ease both; }
+.fi { animation: fadeIn .4s ease both; }
+.popin { animation: pop .4s cubic-bezier(.34,1.56,.64,1) both; }
+.si { animation: slideIn .4s ease both; }
+.breathe-anim { animation: breathe 4s ease-in-out infinite; }
+.pulse-anim { animation: pulse 1.4s ease-in-out infinite; }
+
+.shimmer-gold {
+  background: linear-gradient(90deg,#c8a84b,#f0d88a,#c8a84b,#e8c870);
+  background-size: 400% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 5s linear infinite;
+}
+.shimmer-blue {
+  background: linear-gradient(90deg,#5b8dee,#90b8ff,#5b8dee);
+  background-size: 400% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* ── TYPOGRAPHY ── */
+.mono { font-family: 'DM Mono', monospace; }
+.label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:4px; color:var(--text-dim); text-transform:uppercase; }
+
+/* ── BUTTONS ── */
+.btn {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: all .18s ease;
+  font-family: 'DM Mono', monospace;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(.96); opacity: .85; }
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg,rgba(91,141,238,.2),rgba(91,141,238,.08));
+  border: 1px solid rgba(91,141,238,.35) !important;
+  border-radius: 14px;
+  padding: 17px;
+  color: var(--blue);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.btn-gold {
+  width: 100%;
+  background: linear-gradient(135deg,rgba(200,168,75,.18),rgba(200,168,75,.07));
+  border: 1px solid rgba(200,168,75,.3) !important;
+  border-radius: 14px;
+  padding: 17px;
+  color: var(--gold);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+.btn-ghost {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border) !important;
+  border-radius: 14px;
+  padding: 17px;
+  color: var(--text-mid);
+  font-size: 13px;
+}
+.btn-back {
+  background: none;
+  border: none !important;
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 0;
+  margin-bottom: 28px;
+  display: inline-block;
+}
+
+/* ── CARDS ── */
+.card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.card-gold { background: var(--gold-dim); border-color: rgba(200,168,75,.15) !important; }
+.card-blue { background: var(--blue-dim); border-color: rgba(91,141,238,.2) !important; }
+.card-red  { background: var(--red-dim);  border-color: rgba(224,85,85,.2) !important; }
+.card-green{ background: var(--green-dim);border-color: rgba(78,203,141,.2) !important; }
+
+/* ── ARG CARD ── */
+.arg-card {
+  background: rgba(255,255,255,.018);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  padding: 11px 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all .2s ease;
+  position: relative;
+}
+.arg-card:active { transform: scale(.97); }
+.arg-card.active-b {
+  background: rgba(91,141,238,.1);
+  border-color: rgba(91,141,238,.35) !important;
+  transform: scale(1.01);
+}
+.arg-card.active-c {
+  background: rgba(224,85,85,.1);
+  border-color: rgba(224,85,85,.3) !important;
+  transform: scale(1.01);
+}
+.arg-check {
+  position: absolute; top: 7px; right: 7px;
+  width: 15px; height: 15px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; color: #fff; font-weight: 700;
+}
+
+/* ── BALANCE BEAM ── */
+.beam-group {
+  transition: transform 1.3s cubic-bezier(.22,1,.36,1);
+  transform-origin: 150px 44px;
+}
+
+/* ── ATTR BAR ── */
+.attr-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1.2s cubic-bezier(.22,1,.36,1);
+}
+
+/* ── INSTALL BANNER ── */
+#install-banner {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #0f0f1e;
+  border-top: 1px solid rgba(200,168,75,.2);
+  padding: 16px 20px calc(16px + var(--safe-bot));
+  z-index: 999;
+  display: none;
+}
+
+/* ── FRICTION PROGRESS ── */
+#friction-bar {
+  height: 2px;
+  background: var(--red);
+  border-radius: 1px;
+}
+
+/* ── EMOTION CARD expanded ── */
+.emotion-note { display: none; font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim); line-height:1.6; margin-top:4px; }
+
+textarea {
+  caret-color: var(--gold);
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'Literata', Georgia, serif;
+  font-size: 14px;
+  line-height: 1.8;
+  resize: none;
+  width: 100%;
+}
+textarea::placeholder { color: var(--text-dim); }
+
+input[type=text] {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'Literata', Georgia, serif;
+  font-size: 14px;
+  width: 100%;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--text-dim);
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: ENTRY
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-entry" class="screen">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    background:radial-gradient(ellipse at 50% 30%,rgba(200,168,75,.05) 0%,transparent 65%);">
+
+    <div class="fi breathe-anim" style="margin-bottom:40px">
+      <svg width="140" height="140" viewBox="0 0 140 140" fill="none">
+        <defs>
+          <radialGradient id="entryOrb" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#c8a84b" stop-opacity=".15"/>
+            <stop offset="100%" stop-color="#c8a84b" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="70" cy="70" r="65" fill="url(#entryOrb)"/>
+        <circle cx="70" cy="70" r="46" fill="none" stroke="rgba(200,168,75,.06)" stroke-width="1"/>
+        <circle cx="70" cy="70" r="28" fill="none" stroke="rgba(200,168,75,.08)" stroke-width="1"/>
+        <rect x="67" y="32" width="6" height="64" rx="3" fill="#111122"/>
+        <circle cx="70" cy="30" r="8" fill="#1a1a2e"/>
+        <circle cx="70" cy="30" r="4" fill="#c8a84b"/>
+        <g style="transform-origin:70px 30px;transform:rotate(-7deg)">
+          <rect x="16" y="27" width="108" height="4" rx="2" fill="#1e1e38"/>
+          <line x1="28" y1="31" x2="28" y2="62" stroke="#1e1e38" stroke-width="1.2"/>
+          <ellipse cx="28" cy="66" rx="20" ry="6.5" fill="#0c0c1e" stroke="rgba(200,168,75,.5)" stroke-width="1.2"/>
+          <text x="28" y="70" text-anchor="middle" font-size="11">✨</text>
+          <line x1="112" y1="31" x2="112" y2="54" stroke="#1e1e38" stroke-width="1.2"/>
+          <ellipse cx="112" cy="58" rx="20" ry="6.5" fill="#0c0c1e" stroke="rgba(91,141,238,.3)" stroke-width="1.2"/>
+          <text x="112" y="62" text-anchor="middle" font-size="11">🌑</text>
+        </g>
+        <rect x="52" y="98" width="36" height="6" rx="3" fill="#0e0e1e"/>
+      </svg>
+    </div>
+
+    <p class="fu mono" style="animation-delay:.05s;font-size:9px;letter-spacing:5px;color:var(--text-dim);text-transform:uppercase;margin-bottom:16px">
+      Sistema de Decisão
+    </p>
+    <h1 class="fu" style="animation-delay:.12s;font-size:46px;font-weight:300;line-height:1.05;margin-bottom:18px;letter-spacing:-1px">
+      <span class="shimmer-gold">Equilibrium</span>
+    </h1>
+    <p class="fu mono" style="animation-delay:.22s;font-size:12px;color:var(--text-mid);line-height:1.85;max-width:270px;margin-bottom:52px">
+      Decisões possuem peso emocional.<br>
+      Este app torna essa batalha<br>
+      <em style="color:var(--gold)">visível.</em>
+    </p>
+    <button class="btn btn-gold popin" style="animation-delay:.36s;max-width:220px" onclick="goToEmotional()">
+      ENTRAR
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: EMOTIONAL STATE
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-emotional" class="screen">
+  <p class="label fu" style="margin-bottom:14px">Estado Emocional</p>
+  <h2 class="fu" style="animation-delay:.06s;font-size:32px;font-weight:300;line-height:1.2;margin-bottom:10px">
+    Como você está<br><em style="color:var(--gold);font-style:normal">agora?</em>
+  </h2>
+  <p class="fu mono" style="animation-delay:.12s;font-size:11px;color:var(--text-mid);line-height:1.7;margin-bottom:28px">
+    O estado emocional muda o peso de cada decisão.<br>Seja honesto.
+  </p>
+  <div id="emotion-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px"></div>
+  <button class="btn btn-primary" id="btn-emotion-next" onclick="confirmEmotion()" style="opacity:.4;pointer-events:none">
+    CONTINUAR →
+  </button>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: HOME
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen">
+  <!-- Header -->
+  <div class="fu" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+    <div>
+      <p class="label" style="margin-bottom:7px">Equilibrium</p>
+      <h1 id="home-greeting" style="font-size:24px;font-weight:300;line-height:1.2">Pronto para decidir?</h1>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="goTo('patterns')"
+        style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:8px 9px;font-size:14px;color:var(--text-mid)">📊</button>
+      <button class="btn" onclick="goTo('memory')"
+        style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:8px 9px;font-size:14px;color:var(--text-mid)">💾</button>
+      <button class="btn" onclick="goTo('identity')"
+        style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:8px 9px;font-size:14px;color:var(--text-mid)">🪞</button>
+    </div>
+  </div>
+
+  <!-- Emotion bar -->
+  <button class="btn fu" style="animation-delay:.06s;width:100%;border-radius:12px;padding:12px 16px;
+    display:flex;align-items:center;gap:12px;margin-bottom:18px;text-align:left;
+    border:1px solid rgba(255,255,255,.08)" id="home-emotion-btn" onclick="goTo('emotional')">
+    <span id="home-emotion-emoji" style="font-size:20px"></span>
+    <div style="flex:1">
+      <p class="mono" id="home-emotion-label" style="font-size:12px;margin-bottom:2px"></p>
+      <p class="mono" id="home-emotion-note" style="font-size:10px;color:var(--text-dim);line-height:1.5"></p>
+    </div>
+    <span class="mono" style="font-size:10px;color:var(--text-dim)">trocar</span>
+  </button>
+
+  <!-- Identity reminder -->
+  <div id="home-identity-card" class="card card-gold fu" style="animation-delay:.1s;margin-bottom:16px;display:none">
+    <p class="label" style="color:rgba(200,168,75,.5);margin-bottom:7px">Sua identidade</p>
+    <p id="home-identity-text" style="font-size:14px;color:var(--gold);font-weight:300;line-height:1.6;font-style:italic"></p>
+  </div>
+
+  <!-- Memory echo -->
+  <div id="home-memory-card" style="display:none;margin-bottom:16px;
+    background:rgba(255,255,255,.02);border:1px solid var(--border);
+    border-left:2px solid rgba(200,168,75,.3);border-radius:0 12px 12px 0;padding:13px 16px">
+    <p class="label" style="margin-bottom:6px">Memória emocional</p>
+    <p class="mono" id="home-memory-text" style="font-size:11px;color:var(--text-mid);line-height:1.65;font-style:italic"></p>
+    <p class="mono" id="home-memory-date" style="font-size:9px;color:var(--text-dim);margin-top:5px"></p>
+  </div>
+
+  <!-- Impulse mode -->
+  <button class="btn fu" style="animation-delay:.14s;width:100%;background:var(--red-dim);
+    border:1px solid rgba(224,85,85,.22);border-radius:14px;padding:16px 20px;
+    display:flex;align-items:center;gap:14px;text-align:left;margin-bottom:22px"
+    onclick="goTo('impulse')">
+    <div style="width:36px;height:36px;border-radius:50%;background:rgba(224,85,85,.15);
+      display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⚡</div>
+    <div>
+      <p class="mono" style="font-size:13px;font-weight:500;color:var(--red);margin-bottom:3px">Modo Impulso</p>
+      <p class="mono" style="font-size:10px;color:rgba(224,85,85,.45);line-height:1.5">
+        Compulsão · Procrastinação · Ansiedade · Impulso
+      </p>
+    </div>
+    <span style="margin-left:auto;color:rgba(224,85,85,.4);font-size:16px">→</span>
+  </button>
+
+  <!-- Action grid -->
+  <p class="label fu" style="animation-delay:.18s;margin-bottom:14px">Usar a balança</p>
+  <div id="action-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px"></div>
+
+  <!-- Quick stats -->
+  <div id="home-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;display:none">
+    <div class="card" style="text-align:center">
+      <div id="stat-acts" style="font-size:22px;font-weight:300;color:var(--green);margin-bottom:3px">0</div>
+      <div class="label">Ações</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div id="stat-consistency" style="font-size:22px;font-weight:300;color:var(--blue);margin-bottom:3px">—</div>
+      <div class="label">Consistência</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div id="stat-attr" style="font-size:22px;font-weight:300;color:var(--gold);margin-bottom:3px">—</div>
+      <div class="label" id="stat-attr-label">Atributo</div>
+    </div>
+  </div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: BALANCE
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-balance" class="screen">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <button class="btn btn-back" onclick="goTo('home')" style="margin-bottom:0">← voltar</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="bal-action-icon" style="font-size:18px"></span>
+      <span id="bal-action-label" style="font-size:15px;font-weight:300"></span>
+    </div>
+    <button class="btn mono" id="bal-clear-btn" onclick="clearBalance()"
+      style="background:none;font-size:11px;color:var(--text-dim);opacity:0;pointer-events:none">
+      limpar
+    </button>
+  </div>
+
+  <!-- Context note -->
+  <p class="mono" id="bal-context" style="font-size:10px;color:var(--text-dim);margin-bottom:10px;text-align:center;line-height:1.6">
+    Toque nos argumentos que ressoam com você
+  </p>
+
+  <!-- Balance SVG -->
+  <div style="display:flex;justify-content:center;padding:8px 0 2px">
+    <svg id="balance-svg" width="300" height="165" viewBox="0 0 300 165" fill="none">
+      <defs>
+        <radialGradient id="gB" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#5b8dee" stop-opacity="0" id="gB-stop"/>
+          <stop offset="100%" stop-color="#5b8dee" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="gC" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#e05555" stop-opacity="0" id="gC-stop"/>
+          <stop offset="100%" stop-color="#e05555" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="sh"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity=".5"/></filter>
+      </defs>
+      <!-- Glow halos -->
+      <circle id="halo-l" cx="54" cy="116" r="42" fill="url(#gB)" style="transition:all 1.3s ease"/>
+      <circle id="halo-r" cx="246" cy="116" r="42" fill="url(#gC)" style="transition:all 1.3s ease"/>
+      <!-- Stand -->
+      <rect x="146" y="42" width="8" height="96" rx="4" fill="#0e0e1e"/>
+      <rect x="147" y="43" width="6" height="94" rx="3" fill="#141424"/>
+      <!-- Base -->
+      <rect x="116" y="138" width="68" height="10" rx="5" fill="#0c0c1a"/>
+      <rect x="128" y="132" width="44" height="10" rx="5" fill="#111120"/>
+      <!-- Pivot -->
+      <circle cx="150" cy="44" r="12" fill="#0e0e1a"/>
+      <circle cx="150" cy="44" r="7"  fill="#181828"/>
+      <circle id="pivot-gem" cx="150" cy="44" r="3.5" fill="#c8a84b" style="transition:fill .6s"/>
+      <!-- BEAM GROUP — rotates around pivot 150,44 -->
+      <g id="beam-group" class="beam-group">
+        <!-- Beam bar -->
+        <rect x="43" y="41" width="214" height="6" rx="3" fill="#141424"/>
+        <rect x="45" y="42.5" width="210" height="3" rx="1.5" fill="#1c1c2e"/>
+        <!-- Left chain -->
+        <line x1="54" y1="47" x2="54" y2="91" stroke="#181828" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <!-- Left pan -->
+        <ellipse id="pan-l-outer" cx="54" cy="99" rx="32" ry="10" fill="#0a0a1a" stroke="#1a1a2a" stroke-width="1.5" filter="url(#sh)" style="transition:stroke .5s"/>
+        <ellipse id="pan-l-inner" cx="54" cy="94" rx="32" ry="10" fill="#080812" stroke="#121220" stroke-width="1" style="transition:all .5s"/>
+        <text id="pan-l-text" x="54" y="100" text-anchor="middle" font-size="14">☀️</text>
+        <!-- Right chain -->
+        <line x1="246" y1="47" x2="246" y2="91" stroke="#181828" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <!-- Right pan -->
+        <ellipse id="pan-r-outer" cx="246" cy="99" rx="32" ry="10" fill="#160808" stroke="#1a1010" stroke-width="1.5" filter="url(#sh)" style="transition:stroke .5s"/>
+        <ellipse id="pan-r-inner" cx="246" cy="94" rx="32" ry="10" fill="#0f0808" stroke="#160a0a" stroke-width="1" style="transition:all .5s"/>
+        <text id="pan-r-text" x="246" y="100" text-anchor="middle" font-size="14">🌑</text>
+      </g>
+      <!-- Labels -->
+      <text x="54"  y="160" text-anchor="middle" font-size="7" fill="#2e2e50" letter-spacing="3" font-family="DM Mono, monospace">AGIR</text>
+      <text x="246" y="160" text-anchor="middle" font-size="7" fill="#2e2e50" letter-spacing="3" font-family="DM Mono, monospace">NÃO AGIR</text>
+    </svg>
+  </div>
+
+  <!-- Weight display -->
+  <div style="display:flex;justify-content:space-between;padding:0 36px;margin-bottom:12px">
+    <div style="text-align:center">
+      <div id="bal-bweight" style="font-size:28px;font-weight:300;letter-spacing:-1px;color:var(--text-dim);transition:color .5s">0</div>
+      <div class="label">AGIR</div>
+    </div>
+    <div style="text-align:center;align-self:center">
+      <div class="label" style="letter-spacing:1px">PESO</div>
+    </div>
+    <div style="text-align:center">
+      <div id="bal-cweight" style="font-size:28px;font-weight:300;letter-spacing:-1px;color:var(--text-dim);transition:color .5s">0</div>
+      <div class="label">NÃO AGIR</div>
+    </div>
+  </div>
+
+  <!-- Verdict -->
+  <div id="bal-verdict" style="display:none;margin:0 0 12px;border-radius:12px;padding:12px 16px;text-align:center">
+    <p id="bal-verdict-text" class="mono" style="font-size:12px;line-height:1.65"></p>
+  </div>
+
+  <!-- Identity anchor -->
+  <div id="bal-identity" style="display:none;margin-bottom:12px;
+    border-left:2px solid rgba(200,168,75,.4);border-radius:0 10px 10px 0;padding:11px 14px;
+    background:var(--gold-dim)">
+    <p class="mono" style="font-size:10px;color:var(--text-dim);margin-bottom:4px">Sua identidade diz:</p>
+    <p class="mono" id="bal-identity-text" style="font-size:11px;color:var(--gold);line-height:1.65;font-style:italic"></p>
+  </div>
+
+  <!-- Memory echo -->
+  <div id="bal-memory" style="display:none;margin-bottom:12px;
+    border-left:2px solid var(--text-dim);border-radius:0 10px 10px 0;padding:11px 14px;
+    background:rgba(255,255,255,.02)">
+    <p class="mono" id="bal-memory-date" style="font-size:9px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;margin-bottom:4px"></p>
+    <p class="mono" id="bal-memory-text" style="font-size:11px;color:var(--text-mid);line-height:1.65;font-style:italic"></p>
+  </div>
+
+  <!-- Arg columns -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0 4px">
+    <div style="padding:0 5px">
+      <div class="mono" style="font-size:8px;letter-spacing:3px;color:rgba(91,141,238,.45);
+        text-transform:uppercase;text-align:center;margin-bottom:10px;padding-bottom:8px;
+        border-bottom:1px solid rgba(91,141,238,.1)">✦ AGIR</div>
+      <div id="args-benefit"></div>
+    </div>
+    <div style="padding:0 5px">
+      <div class="mono" style="font-size:8px;letter-spacing:3px;color:rgba(224,85,85,.45);
+        text-transform:uppercase;text-align:center;margin-bottom:10px;padding-bottom:8px;
+        border-bottom:1px solid rgba(224,85,85,.1)">⚠ NÃO AGIR</div>
+      <div id="args-cost"></div>
+    </div>
+  </div>
+
+  <!-- Decision buttons -->
+  <div id="bal-decision-btns" style="display:none;padding:16px 0 0;gap:10px;display:none">
+    <div style="display:flex;gap:10px">
+      <button class="btn" onclick="makeDecision('act')" style="flex:2;background:linear-gradient(135deg,rgba(91,141,238,.2),rgba(91,141,238,.08));
+        border:1px solid rgba(91,141,238,.3);border-radius:13px;padding:15px;color:var(--blue);font-size:13px;letter-spacing:1px">
+        VOU AGIR ✓
+      </button>
+      <button class="btn btn-ghost" onclick="makeDecision('skip')" style="flex:1;padding:15px">
+        Agora não
+      </button>
+    </div>
+  </div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: POST-DECISION
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-postdecision" class="screen">
+  <p class="label fu" id="post-label" style="margin-bottom:14px"></p>
+  <h2 class="fu" style="animation-delay:.08s;font-size:28px;font-weight:300;line-height:1.3;margin-bottom:20px" id="post-title"></h2>
+
+  <div id="post-microaction" class="card card-green fu" style="animation-delay:.14s;margin-bottom:18px;display:none">
+    <p class="label" style="color:rgba(78,203,141,.5);margin-bottom:8px">Ação mínima</p>
+    <p class="mono" id="post-micro-text" style="font-size:13px;color:rgba(78,203,141,.85);line-height:1.7"></p>
+  </div>
+
+  <div class="card fu" style="animation-delay:.18s;border-left:2px solid rgba(200,168,75,.3);
+    border-radius:0 12px 12px 0;margin-bottom:20px">
+    <p class="label" style="margin-bottom:6px">Neurociência</p>
+    <p class="mono" id="post-neuro" style="font-size:11px;color:var(--text-mid);line-height:1.7"></p>
+  </div>
+
+  <div class="card card-gold fu" style="animation-delay:.22s;margin-bottom:20px;flex:1">
+    <p class="label" style="color:rgba(200,168,75,.45);margin-bottom:10px">O que você sente agora?</p>
+    <textarea id="post-memo" rows="4" placeholder="Este momento, em suas palavras, será salvo na sua memória emocional..."></textarea>
+  </div>
+
+  <button class="btn btn-primary" id="post-finish-btn" onclick="finishDecision()" style="margin-bottom:8px">
+    CONCLUIR →
+  </button>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: IMPULSE
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-impulse" class="screen">
+  <button class="btn btn-back" onclick="goTo('home')">← voltar</button>
+
+  <!-- Mode selection -->
+  <div id="impulse-select">
+    <p class="label fu" style="color:rgba(224,85,85,.5);margin-bottom:14px">⚡ Modo Impulso</p>
+    <h2 class="fu" style="animation-delay:.06s;font-size:30px;font-weight:300;line-height:1.2;margin-bottom:10px">
+      O que está<br><em style="color:var(--red)">acontecendo?</em>
+    </h2>
+    <p class="mono fu" style="animation-delay:.12s;font-size:11px;color:var(--text-mid);line-height:1.7;margin-bottom:26px">
+      Sem julgamento. Apenas clareza.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:12px" id="impulse-mode-list"></div>
+  </div>
+
+  <!-- Friction -->
+  <div id="impulse-friction" style="display:none;flex:1;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center">
+    <div id="friction-icon" class="breathe-anim" style="font-size:40px;margin-bottom:20px"></div>
+    <p class="mono" id="friction-mode-label" style="font-size:11px;letter-spacing:3px;color:var(--text-dim);
+      text-transform:uppercase;margin-bottom:16px"></p>
+    <p class="mono" style="font-size:13px;color:var(--text-mid);line-height:1.8;max-width:280px;margin-bottom:32px">
+      Antes de qualquer coisa:<br>
+      <strong style="color:var(--text)">respira.</strong><br>
+      Seu sistema racional precisa de um momento.
+    </p>
+    <div style="width:200px;height:2px;background:rgba(255,255,255,.06);border-radius:1px;margin-bottom:16px">
+      <div id="friction-bar" style="height:100%;border-radius:1px;width:100%;background:var(--red)"></div>
+    </div>
+    <div id="friction-count" style="font-size:28px;font-weight:300;color:var(--red);margin-bottom:8px">7</div>
+    <p class="mono" style="font-size:10px;color:var(--text-dim)">Preparando resposta racional...</p>
+    <button class="btn card" style="margin-top:24px;font-size:11px;color:var(--text-dim);padding:10px 20px"
+      onclick="skipFriction()">Pular espera</button>
+  </div>
+
+  <!-- Loading -->
+  <div id="impulse-loading" style="display:none;flex:1;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px">
+    <div id="loading-icon" class="breathe-anim" style="font-size:32px"></div>
+    <p class="mono" style="font-size:11px;color:var(--text-mid);letter-spacing:2px">Processando...</p>
+  </div>
+
+  <!-- Response -->
+  <div id="impulse-response" style="display:none">
+    <p class="label" id="imp-mode-tag" style="margin-bottom:16px"></p>
+
+    <div id="imp-breath" class="card card-blue" style="display:none;margin-bottom:18px;text-align:center">
+      <p class="label" style="color:var(--blue);margin-bottom:10px">Grounding</p>
+      <p class="mono" style="font-size:12px;color:rgba(91,141,238,.7);line-height:1.8">
+        Inspire 4s → segure 4s → expire 6s<br>
+        <span style="font-size:10px;color:var(--text-dim)">Ativa o sistema nervoso parassimpático</span>
+      </p>
+    </div>
+
+    <div class="card card-red" style="margin-bottom:18px">
+      <p class="mono" id="imp-interrupt" style="font-size:15px;color:rgba(224,85,85,.9);line-height:1.75;font-weight:300"></p>
+    </div>
+
+    <p class="label" style="margin-bottom:12px">Perguntas que interrompem o ciclo</p>
+    <div id="imp-questions"></div>
+
+    <div id="imp-anchor-card" class="card card-gold" style="display:none;margin-top:18px;text-align:center">
+      <p class="mono" id="imp-anchor" style="font-size:15px;color:var(--gold);font-weight:300;line-height:1.6;font-style:italic"></p>
+    </div>
+
+    <button class="btn btn-back" style="margin-top:24px" onclick="resetImpulse()">← outro modo</button>
+  </div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: IDENTITY
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-identity" class="screen">
+  <button class="btn btn-back" onclick="goTo('home')">← voltar</button>
+  <p class="label fu" style="margin-bottom:14px">Sistema de Identidade</p>
+  <h2 class="fu" style="animation-delay:.06s;font-size:32px;font-weight:300;line-height:1.2;margin-bottom:12px">
+    Quem você está<br><span class="shimmer-gold">se tornando?</span>
+  </h2>
+  <p class="mono fu" style="animation-delay:.1s;font-size:11px;color:var(--text-mid);line-height:1.8;margin-bottom:24px">
+    Identidade é a âncora da disciplina.<br>
+    Não "tenho que fazer" — mas "é assim que eu sou".
+  </p>
+
+  <!-- Attributes -->
+  <div class="card fu" style="animation-delay:.14s;margin-bottom:22px">
+    <p class="label" style="margin-bottom:14px">Atributos psicológicos</p>
+    <div id="identity-attrs" style="display:flex;flex-direction:column;gap:10px"></div>
+    <p class="mono" style="font-size:9px;color:var(--text-dim);margin-top:10px;line-height:1.6">
+      Cada decisão consciente fortalece ou enfraquece esses atributos.
+    </p>
+  </div>
+
+  <!-- Future self -->
+  <div class="card card-gold fu" style="animation-delay:.2s;margin-bottom:18px;flex:1">
+    <p class="label" style="color:rgba(200,168,75,.45);margin-bottom:12px">
+      Em 5 anos, meu eu futuro é alguém que...
+    </p>
+    <textarea id="identity-text" rows="5" style="color:var(--gold);font-style:italic;min-height:110px"
+      placeholder="tem disciplina real, age com intenção, cuida do corpo..."></textarea>
+  </div>
+
+  <div class="fu" style="animation-delay:.26s;margin-bottom:20px">
+    <p class="label" style="margin-bottom:12px">Perguntas-âncora</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <span style="color:var(--gold);font-size:12px;margin-top:2px">—</span>
+        <p class="mono" style="font-size:11px;color:var(--text-mid);line-height:1.65">O meu eu futuro aprovaria essa escolha?</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <span style="color:var(--gold);font-size:12px;margin-top:2px">—</span>
+        <p class="mono" style="font-size:11px;color:var(--text-mid);line-height:1.65">Estou agindo por impulso ou por intenção?</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <span style="color:var(--gold);font-size:12px;margin-top:2px">—</span>
+        <p class="mono" style="font-size:11px;color:var(--text-mid);line-height:1.65">Isso me aproxima ou afasta de quem escolhi ser?</p>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-gold" id="identity-save-btn" onclick="saveIdentity()">SALVAR IDENTIDADE</button>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: PATTERNS
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-patterns" class="screen">
+  <button class="btn btn-back" onclick="goTo('home')">← voltar</button>
+  <p class="label fu" style="margin-bottom:12px">Padrões Comportamentais</p>
+  <h2 class="fu" style="animation-delay:.06s;font-size:30px;font-weight:300;line-height:1.2;margin-bottom:24px">
+    Seu espelho<br><span class="shimmer-gold">mental.</span>
+  </h2>
+  <div id="patterns-content"></div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN: MEMORY
+═══════════════════════════════════════════════════════════ -->
+<div id="screen-memory" class="screen">
+  <button class="btn btn-back" onclick="goTo('home')">← voltar</button>
+  <p class="label fu" style="margin-bottom:12px">Memória Emocional</p>
+  <h2 class="fu" style="animation-delay:.06s;font-size:30px;font-weight:300;line-height:1.2;margin-bottom:10px">
+    O que você<br><em style="color:var(--gold);font-style:normal">precisa lembrar.</em>
+  </h2>
+  <p class="mono fu" style="animation-delay:.1s;font-size:11px;color:var(--text-mid);line-height:1.75;margin-bottom:24px">
+    Esses registros serão usados em momentos de decisão.
+  </p>
+
+  <div class="card card-gold fu" style="animation-delay:.14s;margin-bottom:20px">
+    <p class="label" style="color:rgba(200,168,75,.45);margin-bottom:10px">Registrar pensamento</p>
+    <textarea id="memory-input" rows="3" style="color:var(--gold);font-style:italic"
+      placeholder="Um momento de clareza, uma verdade sobre si mesmo, uma promessa..."></textarea>
+    <button class="btn" id="memory-save-btn" onclick="saveMemory()"
+      style="margin-top:10px;background:none;border:1px solid rgba(200,168,75,.2);
+        border-radius:10px;padding:9px 18px;color:var(--text-dim);font-size:11px;letter-spacing:1px">
+      SALVAR
+    </button>
+  </div>
+
+  <div id="memory-list"></div>
+  <div style="height:20px"></div>
+</div>
+
+<!-- Install banner for iOS -->
+<div id="install-banner">
+  <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:12px">
+    <div style="width:44px;height:44px;border-radius:10px;background:#0e0e1e;
+      border:1px solid rgba(200,168,75,.2);display:flex;align-items:center;justify-content:center;
+      font-size:22px;flex-shrink:0">⚖️</div>
+    <div>
+      <p class="mono" style="font-size:13px;color:var(--text);margin-bottom:4px;font-weight:500">
+        Instalar como app
+      </p>
+      <p class="mono" style="font-size:11px;color:var(--text-dim);line-height:1.6">
+        Toque em <strong style="color:var(--gold)">□↑</strong> (Compartilhar) e depois em<br>
+        <strong style="color:var(--gold)">"Adicionar à Tela de Início"</strong>
+      </p>
+    </div>
+  </div>
+  <button class="btn" onclick="closeBanner()"
+    style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);
+      border-radius:10px;padding:12px;color:var(--text-dim);font-size:12px;letter-spacing:1px">
+    ENTENDI
+  </button>
+</div>
+
+</div><!-- #app -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const ACTIONS = [
+  { id:"estudar",   label:"Estudar",               icon:"📚", category:"crescimento",
+    microAction:"Abra o material agora. Apenas olhe. Não precisa ler ainda.",
+    dopamineNote:"O alívio de procrastinar dura ~12 min. O arrependimento, meses." },
+  { id:"treinar",   label:"Treinar",                icon:"💪", category:"saúde",
+    microAction:"Vista o tênis. Só isso. O corpo sabe o que fazer depois.",
+    dopamineNote:"Cada treino libera BDNF — o fertilizante do seu cérebro." },
+  { id:"dormir",    label:"Dormir cedo",            icon:"🌙", category:"descanso",
+    microAction:"Coloque o celular fora do alcance agora.",
+    dopamineNote:"Sono insuficiente reduz em 40% sua resistência a impulsos amanhã." },
+  { id:"procras",   label:"Parar de procrastinar",  icon:"⏳", category:"foco",
+    microAction:"Escreva 1 tarefa. Diga em voz alta: 'Farei X por 5 minutos.'",
+    dopamineNote:"Iniciar uma tarefa ativa o mesmo circuito de recompensa de completá-la." },
+  { id:"compras",   label:"Evitar compra impulsiva",icon:"💳", category:"finanças",
+    microAction:"Espere 24h. Se ainda quiser, compre. Raramente vai querer.",
+    dopamineNote:"O pico de dopamina pelo desejo de comprar é maior que o da compra." },
+  { id:"dieta",     label:"Manter a dieta",         icon:"🥗", category:"saúde",
+    microAction:"Beba um copo d'água. O impulso alimentar muitas vezes é sede.",
+    dopamineNote:"Açúcar sequestra o mesmo circuito dopaminérgico de substâncias viciantes." },
+  { id:"meditar",   label:"Meditar",                icon:"🧘", category:"mental",
+    microAction:"Feche os olhos. Cinco respirações profundas. Apenas isso.",
+    dopamineNote:"8 semanas de meditação reduzem fisicamente o volume da amígdala." },
+  { id:"redes",     label:"Sair das redes sociais", icon:"📵", category:"foco",
+    microAction:"Celular virado para baixo por 20 minutos.",
+    dopamineNote:"O feed usa o mesmo loop de recompensa variável de slot machines." },
+];
+
+const EMOTIONAL_STATES = [
+  { id:"ansioso",      label:"Ansioso",              emoji:"😰", color:"#5b8dee",
+    note:"Seu sistema nervoso está em alerta. Decisões agora tendem à fuga.",
+    tone:"grounding", intensity:"low" },
+  { id:"cansado",      label:"Cansado",              emoji:"😴", color:"#8888cc",
+    note:"Córtex pré-frontal reduzido. Resistência ao impulso muito mais baixa.",
+    tone:"gentle", intensity:"low" },
+  { id:"frustrado",    label:"Frustrado",            emoji:"😤", color:"#e09040",
+    note:"Frustração é energia. A questão é em qual direção você vai apontá-la.",
+    tone:"direct", intensity:"medium" },
+  { id:"motivado",     label:"Motivado",             emoji:"🔥", color:"#4ecb8d",
+    note:"Estado ótimo de decisão. Use essa janela — ela não dura para sempre.",
+    tone:"energetic", intensity:"high" },
+  { id:"sobrecarregado",label:"Sobrecarregado",      emoji:"🌊", color:"#aa66cc",
+    note:"Quando tudo pesa, o menor movimento tem o maior valor.",
+    tone:"minimal", intensity:"low" },
+  { id:"alivio",       label:"Buscando alívio",      emoji:"🌫️", color:"#e05555",
+    note:"O cérebro pede escape. Este é exatamente o momento de pausa.",
+    tone:"interrupt", intensity:"medium" },
+  { id:"neutro",       label:"Neutro",               emoji:"😐", color:"#6868a0",
+    note:"Estado de base. Boa capacidade de reflexão racional agora.",
+    tone:"balanced", intensity:"medium" },
+];
+
+const ATTRIBUTES = [
+  { id:"disciplina",   label:"Disciplina",   icon:"⚡" },
+  { id:"clareza",      label:"Clareza",      icon:"💎" },
+  { id:"foco",         label:"Foco",         icon:"🎯" },
+  { id:"coragem",      label:"Coragem",      icon:"🦁" },
+  { id:"consistencia", label:"Consistência", icon:"🔗" },
+  { id:"autocontrole", label:"Autocontrole", icon:"🧊" },
+];
+
+const IMPULSE_MODES = [
+  { id:"compulsao",  label:"Compulsão",        icon:"⚡", desc:"Vontade intensa de algo que sei que não devo" },
+  { id:"procras",    label:"Procrastinação",   icon:"🌀", desc:"Adiando algo importante sem conseguir começar" },
+  { id:"ansiedade",  label:"Ansiedade",         icon:"💭", desc:"Sentindo pressão e precisando escapar agora" },
+  { id:"impulsiva",  label:"Decisão impulsiva", icon:"🎲", desc:"Prestes a agir por impulso sem refletir" },
+];
+
+const FALLBACK_ARGS = {
+  estudar: {
+    benefits:[
+      {text:"Cada hora de estudo cria opções que seu eu de amanhã ainda não imagina.",emotionalWeight:9,intensity:8,urgency:6,futureImpact:10},
+      {text:"Competência genuína é a única confiança que ninguém pode tirar de você.",emotionalWeight:8,intensity:7,urgency:5,futureImpact:9},
+      {text:"Você está votando, agora, em quem escolheu ser.",emotionalWeight:9,intensity:9,urgency:8,futureImpact:8},
+      {text:"O desconforto de estudar dura horas. O arrependimento de não ter estudado, anos.",emotionalWeight:7,intensity:8,urgency:7,futureImpact:9},
+    ],
+    costs:[
+      {text:"A versão de você que não agiu hoje trabalhará o dobro para chegar ao mesmo lugar.",emotionalWeight:9,intensity:8,urgency:7,futureImpact:10},
+      {text:"Cada sessão pulada reforça a narrativa de que você não consegue manter compromissos.",emotionalWeight:8,intensity:9,urgency:8,futureImpact:8},
+      {text:"A procrastinação devolve a tarefa mais pesada, com juros de culpa.",emotionalWeight:8,intensity:7,urgency:6,futureImpact:9},
+      {text:"Você continuará sendo a pessoa que 'vai começar amanhã'. A amanhã chega. Vira semana que vem.",emotionalWeight:7,intensity:8,urgency:9,futureImpact:7},
+    ],
+  },
+};
+
+function getFallback(id){
+  return FALLBACK_ARGS[id] || {
+    benefits:[
+      {text:"Agir agora é votar na versão de si mesmo que você quer ser.",emotionalWeight:9,intensity:8,urgency:7,futureImpact:9},
+      {text:"O desconforto momentâneo é o preço de acesso ao que você realmente quer.",emotionalWeight:8,intensity:7,urgency:6,futureImpact:8},
+      {text:"Cada escolha consciente fortalece sua capacidade de fazer mais escolhas assim.",emotionalWeight:7,intensity:6,urgency:5,futureImpact:9},
+      {text:"Seu eu futuro está sendo construído por exatamente esse momento.",emotionalWeight:9,intensity:9,urgency:8,futureImpact:10},
+    ],
+    costs:[
+      {text:"Não agir não é neutro — é uma decisão ativa de permanecer onde está.",emotionalWeight:9,intensity:8,urgency:7,futureImpact:9},
+      {text:"Cada evitação aprofunda o padrão de evitação. O caminho fica mais difícil.",emotionalWeight:8,intensity:7,urgency:8,futureImpact:9},
+      {text:"O alívio de evitar dura minutos. A consequência de não agir, meses.",emotionalWeight:8,intensity:8,urgency:6,futureImpact:8},
+      {text:"Você continuará sendo a pessoa que sabe o que deveria fazer — e não faz.",emotionalWeight:7,intensity:9,urgency:9,futureImpact:7},
+    ],
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE — persisted via localStorage
+// ═══════════════════════════════════════════════════════════════
+const STORAGE_KEY = 'equilibrium_v1';
+
+function loadState(){
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if(s) return JSON.parse(s);
+  } catch(e){}
+  return null;
+}
+
+function saveState(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); } catch(e){}
+}
+
+const DEFAULT_STATE = {
+  emotionalState: null,
+  identity: { futureSelf: '', saved: false },
+  memories: [],
+  decisions: [],
+  attributes: { disciplina:30, clareza:30, foco:30, coragem:30, consistencia:30, autocontrole:30 },
+  installBannerDismissed: false,
+};
+
+let STATE = Object.assign({}, DEFAULT_STATE, loadState() || {});
+// Merge attributes in case new ones were added
+if(!STATE.attributes) STATE.attributes = {...DEFAULT_STATE.attributes};
+ATTRIBUTES.forEach(a => { if(STATE.attributes[a.id] === undefined) STATE.attributes[a.id] = 30; });
+
+// Balance session state (not persisted)
+let balState = {
+  action: null,
+  args: null,
+  activeB: new Set(),
+  activeC: new Set(),
+  aiLoading: false,
+  pendingChose: null,
+};
+
+// Impulse session state
+let impState = {
+  mode: null,
+  timer: null,
+  countdown: 7,
+};
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+let currentScreen = 'entry';
+let prevScreen = null;
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + id);
+  if(el) el.classList.add('active');
+  currentScreen = id;
+  window.scrollTo(0,0);
+}
+
+function goTo(screen){
+  prevScreen = currentScreen;
+  showScreen(screen);
+  if(screen === 'home') renderHome();
+  if(screen === 'identity') renderIdentity();
+  if(screen === 'patterns') renderPatterns();
+  if(screen === 'memory') renderMemory();
+  if(screen === 'impulse') renderImpulse();
+  if(screen === 'emotional') renderEmotional();
+}
+
+function goToEmotional(){ goTo('emotional'); }
+
+// ═══════════════════════════════════════════════════════════════
+// EMOTIONAL SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderEmotional(){
+  const list = document.getElementById('emotion-list');
+  list.innerHTML = '';
+  EMOTIONAL_STATES.forEach((e,i) => {
+    const sel = STATE.emotionalState === e.id;
+    const btn = document.createElement('button');
+    btn.className = 'btn fu';
+    btn.style.cssText = `animation-delay:${i*.06}s;width:100%;padding:15px 18px;border-radius:14px;text-align:left;
+      display:flex;align-items:center;gap:14px;
+      background:${sel?`rgba(${hexToRgb(e.color)},.1)`:'rgba(255,255,255,.02)'};
+      border:1px solid ${sel?`rgba(${hexToRgb(e.color)},.35)`:'var(--border)'};`;
+    btn.innerHTML = `
+      <span style="font-size:22px;flex-shrink:0">${e.emoji}</span>
+      <div style="flex:1;text-align:left">
+        <p class="mono" style="font-size:13px;color:${sel?e.color:'var(--text-mid)'};font-weight:${sel?500:300};margin-bottom:${sel?4:0}px">${e.label}</p>
+        ${sel?`<p class="mono" style="font-size:11px;color:var(--text-dim);line-height:1.6">${e.note}</p>`:''}
+      </div>
+      ${sel?`<div style="width:8px;height:8px;border-radius:50%;background:${e.color};flex-shrink:0"></div>`:''}
+    `;
+    btn.onclick = () => {
+      STATE.emotionalState = e.id;
+      saveState();
+      renderEmotional();
+      const nextBtn = document.getElementById('btn-emotion-next');
+      nextBtn.style.opacity = '1';
+      nextBtn.style.pointerEvents = 'auto';
+    };
+    list.appendChild(btn);
+  });
+}
+
+function confirmEmotion(){
+  if(!STATE.emotionalState) return;
+  goTo('home');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HOME SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderHome(){
+  // Greeting
+  const identityText = STATE.identity.futureSelf;
+  document.getElementById('home-greeting').textContent = identityText ? 'Bem-vindo de volta.' : 'Pronto para decidir?';
+
+  // Emotion bar
+  const es = EMOTIONAL_STATES.find(e => e.id === STATE.emotionalState) || EMOTIONAL_STATES[6];
+  const homeEmotionBtn = document.getElementById('home-emotion-btn');
+  homeEmotionBtn.style.background = `rgba(${hexToRgb(es.color)},.06)`;
+  homeEmotionBtn.style.borderColor = `rgba(${hexToRgb(es.color)},.18)`;
+  document.getElementById('home-emotion-emoji').textContent = es.emoji;
+  document.getElementById('home-emotion-label').textContent = `Você está ${es.label.toLowerCase()}`;
+  document.getElementById('home-emotion-label').style.color = es.color;
+  document.getElementById('home-emotion-note').textContent = es.note.slice(0,65) + '...';
+
+  // Identity card
+  const iCard = document.getElementById('home-identity-card');
+  if(identityText){
+    iCard.style.display = 'block';
+    document.getElementById('home-identity-text').textContent = `"${identityText.slice(0,80)}${identityText.length>80?'...':''}"`;
+  } else { iCard.style.display = 'none'; }
+
+  // Memory echo
+  const mCard = document.getElementById('home-memory-card');
+  const recent = STATE.memories[0];
+  if(recent){
+    mCard.style.display = 'block';
+    document.getElementById('home-memory-text').textContent = `"${recent.text.slice(0,100)}${recent.text.length>100?'...':''}"`;
+    document.getElementById('home-memory-date').textContent = recent.date;
+  } else { mCard.style.display = 'none'; }
+
+  // Action grid
+  const grid = document.getElementById('action-grid');
+  grid.innerHTML = '';
+  ACTIONS.forEach((a,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn fu';
+    btn.style.cssText = `animation-delay:${.22+i*.05}s;background:rgba(255,255,255,.02);
+      border:1px solid var(--border);border-radius:14px;padding:18px 14px;text-align:left;`;
+    btn.innerHTML = `
+      <div style="font-size:22px;margin-bottom:10px">${a.icon}</div>
+      <div class="mono" style="font-size:12px;color:var(--text-mid);line-height:1.4;margin-bottom:4px">${a.label}</div>
+      <div class="label">${a.category}</div>
+    `;
+    btn.onclick = () => openBalance(a);
+    grid.appendChild(btn);
+  });
+
+  // Stats
+  const dec = STATE.decisions;
+  const statsEl = document.getElementById('home-stats');
+  if(dec.length > 0){
+    statsEl.style.display = 'grid';
+    const acts = dec.filter(d=>d.chose==='act').length;
+    document.getElementById('stat-acts').textContent = acts;
+    document.getElementById('stat-consistency').textContent = Math.round(acts/dec.length*100)+'%';
+    const topAttr = Object.entries(STATE.attributes).sort((a,b)=>b[1]-a[1])[0];
+    document.getElementById('stat-attr').textContent = Math.round(topAttr[1]);
+    document.getElementById('stat-attr-label').textContent = ATTRIBUTES.find(a=>a.id===topAttr[0])?.label || 'Atributo';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BALANCE SCREEN
+// ═══════════════════════════════════════════════════════════════
+function argWeight(a){
+  return (a.emotionalWeight*0.4 + a.intensity*0.25 + a.urgency*0.15 + a.futureImpact*0.2);
+}
+
+function openBalance(action){
+  balState.action = action;
+  balState.args = getFallback(action.id);
+  balState.activeB = new Set();
+  balState.activeC = new Set();
+  balState.aiLoading = true;
+  balState.pendingChose = null;
+
+  document.getElementById('bal-action-icon').textContent = action.icon;
+  document.getElementById('bal-action-label').textContent = action.label;
+  document.getElementById('bal-context').textContent = 'Personalizando argumentos para seu estado...';
+  document.getElementById('bal-clear-btn').style.opacity = '0';
+  document.getElementById('bal-clear-btn').style.pointerEvents = 'none';
+  document.getElementById('bal-verdict').style.display = 'none';
+  document.getElementById('bal-identity').style.display = 'none';
+  document.getElementById('bal-memory').style.display = 'none';
+  document.getElementById('bal-decision-btns').style.display = 'none';
+  document.getElementById('pivot-gem').setAttribute('fill','rgba(91,141,238,.8)');
+  document.getElementById('pivot-gem').classList.add('pulse-anim');
+
+  renderArgCards();
+  updateBalance();
+  showScreen('balance');
+
+  // AI call
+  fetchAIArgs(action);
+}
+
+async function fetchAIArgs(action){
+  const es = EMOTIONAL_STATES.find(e=>e.id===STATE.emotionalState) || EMOTIONAL_STATES[6];
+  const mem = STATE.memories[0];
+  const sysP = `Você é o lado racional e honesto da mente do usuário. NÃO é coach motivacional. Gere argumentos psicológicos profundos, honestos, emocionalmente precisos. Segunda pessoa. Neurociência e economia comportamental. NUNCA use frases genéricas de autoajuda. Adapte ao estado emocional.
+Responda APENAS JSON válido sem markdown:
+{"benefits":[{"text":"string","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9},{"text":"...","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9},{"text":"...","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9},{"text":"...","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9}],"costs":[{"text":"string","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9},{"text":"...","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9},{"text":"...","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9},{"text":"...","emotionalWeight":8,"intensity":7,"urgency":6,"futureImpact":9}]}
+4 benefits, 4 costs. Pesos 5-10.`;
+  const userP = `Decisão: ${action.label}\nEstado emocional: ${es.label} — ${es.note}\nIdentidade: ${STATE.identity.futureSelf||'não informada'}\n${mem?`Memória do usuário: "${mem.text}"`:''}`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,system:sysP,messages:[{role:'user',content:userP}]})
+    });
+    const data = await resp.json();
+    const raw = data.content?.find(b=>b.type==='text')?.text||'';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    if(parsed.benefits && parsed.costs){
+      balState.args = parsed;
+      renderArgCards();
+      updateBalance();
+    }
+  } catch(e){}
+  balState.aiLoading = false;
+  document.getElementById('pivot-gem').setAttribute('fill','#c8a84b');
+  document.getElementById('pivot-gem').classList.remove('pulse-anim');
+  document.getElementById('bal-context').textContent = 'Toque nos argumentos que ressoam com você';
+}
+
+function renderArgCards(){
+  const args = balState.args;
+  if(!args) return;
+  const bEl = document.getElementById('args-benefit');
+  const cEl = document.getElementById('args-cost');
+  bEl.innerHTML = '';
+  cEl.innerHTML = '';
+  args.benefits.forEach((b,i) => {
+    bEl.appendChild(makeArgCard(b, i, 'b'));
+  });
+  args.costs.forEach((c,i) => {
+    cEl.appendChild(makeArgCard(c, i, 'c'));
+  });
+}
+
+function makeArgCard(arg, idx, side){
+  const w = argWeight(arg);
+  const div = document.createElement('div');
+  div.className = 'arg-card fu';
+  div.style.animationDelay = `${idx*.07}s`;
+  div.id = `arg-${side}-${idx}`;
+  const active = side==='b' ? balState.activeB.has(idx) : balState.activeC.has(idx);
+  if(active) div.classList.add(side==='b'?'active-b':'active-c');
+  div.innerHTML = `
+    ${active?`<div class="arg-check" style="background:${side==='b'?'#3a6aae':'#8a2a2a'}">✓</div>`:''}
+    <p class="mono" style="font-size:11px;line-height:1.65;color:${active?(side==='b'?'var(--blue)':'var(--red)'):'var(--text-mid)'};
+      margin-bottom:7px;padding-right:${active?18:0}px;transition:color .2s">${arg.text}</p>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      ${[{l:'EM',v:arg.emotionalWeight},{l:'FI',v:arg.futureImpact}].map(bar=>`
+        <div style="display:flex;align-items:center;gap:5px">
+          <span class="mono" style="font-size:7px;color:var(--text-dim);width:12px">${bar.l}</span>
+          <div style="flex:1;height:2px;background:rgba(255,255,255,.04);border-radius:1px">
+            <div style="width:${(bar.v/10)*100}%;height:100%;border-radius:1px;
+              background:${active?(side==='b'?'var(--blue)':'var(--red)'):'var(--text-dim)'};transition:background .3s"></div>
+          </div>
+          <span class="mono" style="font-size:7px;color:${active?(side==='b'?'var(--blue)':'var(--red)'):'var(--text-dim)'};width:8px;text-align:right">${bar.v}</span>
+        </div>`).join('')}
+    </div>
+  `;
+  div.onclick = () => toggleArg(idx, side);
+  return div;
+}
+
+function toggleArg(idx, side){
+  const set = side==='b' ? balState.activeB : balState.activeC;
+  if(set.has(idx)) set.delete(idx); else set.add(idx);
+  renderArgCards();
+  updateBalance();
+  checkBalanceUI();
+}
+
+function clearBalance(){
+  balState.activeB = new Set();
+  balState.activeC = new Set();
+  renderArgCards();
+  updateBalance();
+  checkBalanceUI();
+}
+
+function updateBalance(){
+  const args = balState.args;
+  if(!args) return;
+  const maxB = args.benefits.reduce((s,b)=>s+argWeight(b),0);
+  const maxC = args.costs.reduce((s,c)=>s+argWeight(c),0);
+  const bW = [...balState.activeB].reduce((s,i)=>s+argWeight(args.benefits[i]),0);
+  const cW = [...balState.activeC].reduce((s,i)=>s+argWeight(args.costs[i]),0);
+
+  document.getElementById('bal-bweight').textContent = bW.toFixed(0);
+  document.getElementById('bal-cweight').textContent = cW.toFixed(0);
+  document.getElementById('bal-bweight').style.color = balState.activeB.size>0?'var(--blue)':'var(--text-dim)';
+  document.getElementById('bal-cweight').style.color = balState.activeC.size>0?'var(--red)':'var(--text-dim)';
+
+  // CORRECT physics:
+  // angle > 0 → benefit side (LEFT) goes DOWN (heavier)
+  // angle < 0 → cost side (RIGHT) goes DOWN (heavier)
+  const rawAngle = maxB>0&&maxC>0 ? ((bW/maxB)-(cW/maxC))*22 : 0;
+  const angle = Math.max(-22, Math.min(22, rawAngle));
+
+  // Rotate beam
+  document.getElementById('beam-group').style.transform = `rotate(${angle}deg)`;
+
+  // Pan glow strength
+  document.getElementById('gB-stop').setAttribute('stop-opacity', bW>0 ? '0.22' : '0');
+  document.getElementById('gC-stop').setAttribute('stop-opacity', cW>0 ? '0.22' : '0');
+
+  // Pan colors
+  if(bW>0){
+    document.getElementById('pan-l-outer').setAttribute('stroke','#5b8dee');
+    document.getElementById('pan-l-inner').setAttribute('fill','rgba(91,141,238,.1)');
+    document.getElementById('pan-l-inner').setAttribute('stroke','rgba(91,141,238,.25)');
+    document.getElementById('pan-l-text').textContent = bW.toFixed(0);
+    document.getElementById('pan-l-text').setAttribute('fill','#5b8dee');
+    document.getElementById('pan-l-text').setAttribute('font-size','12');
+    document.getElementById('pan-l-text').setAttribute('font-family','DM Mono, monospace');
+  } else {
+    document.getElementById('pan-l-outer').setAttribute('stroke','#1a1a2a');
+    document.getElementById('pan-l-inner').setAttribute('fill','#080812');
+    document.getElementById('pan-l-inner').setAttribute('stroke','#121220');
+    document.getElementById('pan-l-text').textContent = '☀️';
+    document.getElementById('pan-l-text').setAttribute('fill','');
+    document.getElementById('pan-l-text').setAttribute('font-size','14');
+    document.getElementById('pan-l-text').setAttribute('font-family','');
+  }
+  if(cW>0){
+    document.getElementById('pan-r-outer').setAttribute('stroke','#e05555');
+    document.getElementById('pan-r-inner').setAttribute('fill','rgba(224,85,85,.1)');
+    document.getElementById('pan-r-inner').setAttribute('stroke','rgba(224,85,85,.25)');
+    document.getElementById('pan-r-text').textContent = cW.toFixed(0);
+    document.getElementById('pan-r-text').setAttribute('fill','#e05555');
+    document.getElementById('pan-r-text').setAttribute('font-size','12');
+    document.getElementById('pan-r-text').setAttribute('font-family','DM Mono, monospace');
+  } else {
+    document.getElementById('pan-r-outer').setAttribute('stroke','#1a1010');
+    document.getElementById('pan-r-inner').setAttribute('fill','#0f0808');
+    document.getElementById('pan-r-inner').setAttribute('stroke','#160a0a');
+    document.getElementById('pan-r-text').textContent = '🌑';
+    document.getElementById('pan-r-text').setAttribute('fill','');
+    document.getElementById('pan-r-text').setAttribute('font-size','14');
+    document.getElementById('pan-r-text').setAttribute('font-family','');
+  }
+}
+
+function checkBalanceUI(){
+  const total = balState.activeB.size + balState.activeC.size;
+  const args = balState.args;
+  if(!args) return;
+  const maxB = args.benefits.reduce((s,b)=>s+argWeight(b),0);
+  const maxC = args.costs.reduce((s,c)=>s+argWeight(c),0);
+  const bW = [...balState.activeB].reduce((s,i)=>s+argWeight(args.benefits[i]),0);
+  const cW = [...balState.activeC].reduce((s,i)=>s+argWeight(args.costs[i]),0);
+
+  // Clear btn
+  if(total>0){
+    document.getElementById('bal-clear-btn').style.opacity='1';
+    document.getElementById('bal-clear-btn').style.pointerEvents='auto';
+  } else {
+    document.getElementById('bal-clear-btn').style.opacity='0';
+    document.getElementById('bal-clear-btn').style.pointerEvents='none';
+  }
+
+  // Verdict
+  const verdEl = document.getElementById('bal-verdict');
+  const verdText = document.getElementById('bal-verdict-text');
+  if(total>=2){
+    const diff = bW-cW;
+    verdEl.style.display='block';
+    if(diff>5){
+      verdEl.style.background='var(--blue-dim)'; verdEl.style.border='1px solid rgba(91,141,238,.25)';
+      verdText.style.color='var(--blue)'; verdText.textContent='A balança pesa para agir. Seu futuro pode sentir isso.';
+    } else if(diff<-5){
+      verdEl.style.background='var(--red-dim)'; verdEl.style.border='1px solid rgba(224,85,85,.2)';
+      verdText.style.color='var(--red)'; verdText.textContent='As consequências de não agir são psicologicamente pesadas.';
+    } else {
+      verdEl.style.background='var(--gold-dim)'; verdEl.style.border='1px solid rgba(200,168,75,.2)';
+      verdText.style.color='var(--gold)'; verdText.textContent='A diferença é pequena. O que você sente que pesa mais?';
+    }
+  } else { verdEl.style.display='none'; }
+
+  // Identity anchor
+  const iEl = document.getElementById('bal-identity');
+  if(total>=3 && STATE.identity.futureSelf){
+    iEl.style.display='block';
+    document.getElementById('bal-identity-text').textContent =
+      `O meu eu futuro — que ${STATE.identity.futureSelf.slice(0,55)}... — o que ele escolheria?`;
+  } else { iEl.style.display='none'; }
+
+  // Memory echo
+  const mEl = document.getElementById('bal-memory');
+  const mem = STATE.memories[0];
+  if(total>=2 && mem){
+    mEl.style.display='block';
+    document.getElementById('bal-memory-date').textContent = `Você escreveu ${mem.date}:`;
+    document.getElementById('bal-memory-text').textContent = `"${mem.text.slice(0,90)}${mem.text.length>90?'...':''}"`;
+  } else { mEl.style.display='none'; }
+
+  // Decision buttons
+  const dbEl = document.getElementById('bal-decision-btns');
+  if(total>=2){ dbEl.style.display='block'; } else { dbEl.style.display='none'; }
+}
+
+function makeDecision(chose){
+  balState.pendingChose = chose;
+  const action = balState.action;
+  const postLabel = document.getElementById('post-label');
+  const postTitle = document.getElementById('post-title');
+  const postMicro = document.getElementById('post-microaction');
+  const postMicroText = document.getElementById('post-micro-text');
+  const postNeuro = document.getElementById('post-neuro');
+  const postFinish = document.getElementById('post-finish-btn');
+
+  if(chose==='act'){
+    postLabel.textContent = '✓ Você escolheu agir';
+    postTitle.innerHTML = 'Micro-ação.<br><span class="shimmer-blue">Faça agora.</span>';
+    postMicro.style.display='block';
+    postMicroText.textContent = action.microAction;
+    postFinish.style.background='linear-gradient(135deg,rgba(78,203,141,.2),rgba(78,203,141,.08))';
+    postFinish.style.borderColor='rgba(78,203,141,.3)';
+    postFinish.style.color='var(--green)';
+  } else {
+    postLabel.textContent = 'Padrão registrado';
+    postTitle.innerHTML = 'Adiou por agora.<br><span style="color:var(--text-mid)">O que você sente?</span>';
+    postMicro.style.display='none';
+    postFinish.style.background='rgba(255,255,255,.03)';
+    postFinish.style.borderColor='var(--border)';
+    postFinish.style.color='var(--text-mid)';
+  }
+  postNeuro.textContent = action.dopamineNote;
+  document.getElementById('post-memo').value = '';
+  showScreen('postdecision');
+}
+
+function finishDecision(){
+  const memo = document.getElementById('post-memo').value.trim();
+  if(memo) addMemory(memo, 'reflection');
+
+  const action = balState.action;
+  const dec = {
+    actionId: action.id,
+    action: action.label,
+    icon: action.icon,
+    chose: balState.pendingChose,
+    emotion: STATE.emotionalState,
+    date: new Date().toLocaleDateString('pt-BR'),
+    ts: Date.now(),
+  };
+  STATE.decisions.unshift(dec);
+  if(STATE.decisions.length > 100) STATE.decisions = STATE.decisions.slice(0,100);
+
+  // Update attributes
+  const d = dec.chose==='act' ? 3 : -2;
+  const clamp = (v,min,max) => Math.min(max,Math.max(min,v));
+  const attr = STATE.attributes;
+  if(action.id==='estudar'||action.id==='procras'){ attr.foco=clamp(attr.foco+d,0,100); attr.disciplina=clamp(attr.disciplina+d,0,100); }
+  if(action.id==='treinar'||action.id==='dieta'){   attr.autocontrole=clamp(attr.autocontrole+d,0,100); attr.consistencia=clamp(attr.consistencia+d,0,100); }
+  if(action.id==='meditar'||action.id==='redes'){   attr.clareza=clamp(attr.clareza+d,0,100); attr.foco=clamp(attr.foco+d,0,100); }
+  if(action.id==='dormir'){                          attr.clareza=clamp(attr.clareza+d,0,100); attr.autocontrole=clamp(attr.autocontrole+d,0,100); }
+  if(action.id==='compras'){                         attr.autocontrole=clamp(attr.autocontrole+d*1.5,0,100); }
+  if(dec.chose==='act') attr.coragem=clamp(attr.coragem+2,0,100);
+  saveState();
+  goTo('home');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// IMPULSE SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderImpulse(){
+  resetImpulse();
+}
+
+function resetImpulse(){
+  clearInterval(impState.timer);
+  impState.mode = null;
+  impState.countdown = 7;
+  document.getElementById('impulse-select').style.display='block';
+  document.getElementById('impulse-friction').style.display='none';
+  document.getElementById('impulse-loading').style.display='none';
+  document.getElementById('impulse-response').style.display='none';
+
+  const list = document.getElementById('impulse-mode-list');
+  list.innerHTML='';
+  IMPULSE_MODES.forEach((m,i)=>{
+    const btn = document.createElement('button');
+    btn.className='btn fu';
+    btn.style.cssText=`animation-delay:${i*.07}s;width:100%;background:var(--red-dim);
+      border:1px solid rgba(224,85,85,.18);border-radius:14px;padding:18px 20px;
+      text-align:left;display:flex;align-items:center;gap:16px`;
+    btn.innerHTML=`
+      <span style="font-size:24px;flex-shrink:0">${m.icon}</span>
+      <div>
+        <p class="mono" style="font-size:13px;font-weight:500;color:var(--red);margin-bottom:4px">${m.label}</p>
+        <p class="mono" style="font-size:11px;color:rgba(224,85,85,.45);line-height:1.5">${m.desc}</p>
+      </div>`;
+    btn.onclick=()=>selectImpulseMode(m);
+    list.appendChild(btn);
+  });
+}
+
+function selectImpulseMode(mode){
+  impState.mode = mode;
+  impState.countdown = 7;
+
+  document.getElementById('impulse-select').style.display='none';
+  document.getElementById('impulse-friction').style.display='flex';
+  document.getElementById('friction-icon').textContent = mode.icon;
+  document.getElementById('friction-mode-label').textContent = mode.label;
+  document.getElementById('friction-count').textContent = '7';
+
+  // Animate bar
+  const bar = document.getElementById('friction-bar');
+  bar.style.transition='none';
+  bar.style.width='100%';
+  setTimeout(()=>{
+    bar.style.transition='width 7s linear';
+    bar.style.width='0%';
+  },50);
+
+  impState.timer = setInterval(()=>{
+    impState.countdown--;
+    document.getElementById('friction-count').textContent = impState.countdown;
+    if(impState.countdown<=0){
+      clearInterval(impState.timer);
+      startImpulseAI();
+    }
+  },1000);
+}
+
+function skipFriction(){
+  clearInterval(impState.timer);
+  startImpulseAI();
+}
+
+async function startImpulseAI(){
+  document.getElementById('impulse-friction').style.display='none';
+  document.getElementById('impulse-loading').style.display='flex';
+  document.getElementById('loading-icon').textContent = impState.mode.icon;
+
+  const es = EMOTIONAL_STATES.find(e=>e.id===STATE.emotionalState)||EMOTIONAL_STATES[6];
+  const mem = STATE.memories[0];
+  const sysP=`Você é o lado racional da mente do usuário em crise. NUNCA seja condescendente. NUNCA use frases motivacionais genéricas. Seja direto, humano, honesto. Interrompa o ciclo automático.
+Responda APENAS JSON: {"interrupt":"frase de interrupção (1-2 linhas)","questions":["q1","q2","q3"],"anchor":"afirmação de identidade curta","breath":true_ou_false}`;
+  const userP=`Modo: ${impState.mode.label} — ${impState.mode.desc}\nEstado: ${es.label}\nIdentidade: ${STATE.identity.futureSelf||'não informada'}\n${mem?`Memória: "${mem.text}"`:''}\nTom: ${es.tone}`;
+
+  let response = null;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,system:sysP,messages:[{role:'user',content:userP}]})
+    });
+    const data = await resp.json();
+    const raw = data.content?.find(b=>b.type==='text')?.text||'';
+    response = JSON.parse(raw.replace(/```json|```/g,'').trim());
+  } catch(e){}
+
+  if(!response) response = {
+    interrupt:'Antes de agir: seu cérebro está em modo de sobrevivência, não de decisão.',
+    questions:['Isso ainda importará em 48 horas?','Estou fugindo de algo ou indo em direção a algo?','O que a versão que quero ser faria agora?'],
+    anchor: STATE.identity.futureSelf ? `Você disse que quer ser alguém que ${STATE.identity.futureSelf.slice(0,50)}...` : 'Você é maior que esse impulso automático.',
+    breath: es.id==='ansioso'||es.id==='alivio'
+  };
+
+  showImpulseResponse(response);
+}
+
+function showImpulseResponse(r){
+  document.getElementById('impulse-loading').style.display='none';
+  document.getElementById('impulse-response').style.display='block';
+
+  const es = EMOTIONAL_STATES.find(e=>e.id===STATE.emotionalState)||EMOTIONAL_STATES[6];
+  document.getElementById('imp-mode-tag').textContent = `${impState.mode.icon} ${impState.mode.label}`;
+
+  // Breath
+  document.getElementById('imp-breath').style.display = r.breath?'block':'none';
+
+  document.getElementById('imp-interrupt').textContent = r.interrupt;
+
+  // Questions
+  const qEl = document.getElementById('imp-questions');
+  qEl.innerHTML='';
+  (r.questions||[]).forEach((q,i)=>{
+    const div=document.createElement('div');
+    div.className='fu';
+    div.style.cssText=`animation-delay:${i*.08}s;border-left:2px solid rgba(224,85,85,.3);border-radius:0 11px 11px 0;padding:13px 15px;margin-bottom:10px;background:rgba(255,255,255,.02)`;
+    div.innerHTML=`<p class="mono" style="font-size:12px;color:var(--text-mid);line-height:1.7">${q}</p>`;
+    qEl.appendChild(div);
+  });
+
+  // Anchor
+  if(r.anchor){
+    document.getElementById('imp-anchor-card').style.display='block';
+    document.getElementById('imp-anchor').textContent=`"${r.anchor}"`;
+  } else {
+    document.getElementById('imp-anchor-card').style.display='none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// IDENTITY SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderIdentity(){
+  document.getElementById('identity-text').value = STATE.identity.futureSelf || '';
+  renderAttrs();
+}
+
+function renderAttrs(){
+  const el=document.getElementById('identity-attrs');
+  el.innerHTML='';
+  ATTRIBUTES.forEach(a=>{
+    const val=STATE.attributes[a.id]||0;
+    const color=val>60?'var(--green)':val>30?'var(--gold)':'var(--red)';
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:10px';
+    div.innerHTML=`
+      <span style="font-size:13px;width:18px;flex-shrink:0">${a.icon}</span>
+      <span class="mono" style="font-size:10px;color:var(--text-mid);width:80px;flex-shrink:0">${a.label}</span>
+      <div style="flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:2px">
+        <div class="attr-fill" style="width:${val}%;background:${color}"></div>
+      </div>
+      <span class="mono" style="font-size:10px;color:var(--text-dim);width:22px;text-align:right">${val}</span>`;
+    el.appendChild(div);
+  });
+}
+
+function saveIdentity(){
+  const text = document.getElementById('identity-text').value.trim();
+  STATE.identity.futureSelf = text;
+  STATE.identity.saved = true;
+  if(text) addMemory(`Minha identidade: ${text}`, 'identity');
+  saveState();
+  const btn=document.getElementById('identity-save-btn');
+  btn.textContent='✓ SALVO';
+  btn.style.background='rgba(78,203,141,.15)';
+  btn.style.borderColor='rgba(78,203,141,.3)';
+  btn.style.color='var(--green)';
+  setTimeout(()=>{
+    btn.textContent='SALVAR IDENTIDADE';
+    btn.style.background='';
+    btn.style.borderColor='';
+    btn.style.color='';
+  },2000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PATTERNS SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderPatterns(){
+  const el=document.getElementById('patterns-content');
+  const dec=STATE.decisions;
+  if(dec.length===0){
+    el.innerHTML=`<div class="card" style="text-align:center;padding:32px 24px">
+      <p class="mono" style="font-size:12px;color:var(--text-dim);line-height:1.8">
+        Use a balança em algumas decisões<br>para ver seus padrões aqui.
+      </p></div>`;
+    return;
+  }
+
+  const acts=dec.filter(d=>d.chose==='act');
+  const skips=dec.filter(d=>d.chose==='skip');
+  const consistency=Math.round(acts.length/dec.length*100);
+
+  // Emotion stats
+  const emStats={};
+  dec.forEach(d=>{
+    if(!d.emotion) return;
+    if(!emStats[d.emotion]) emStats[d.emotion]={acts:0,skips:0};
+    d.chose==='act'?emStats[d.emotion].acts++:emStats[d.emotion].skips++;
+  });
+  const emArr=Object.entries(emStats).map(([id,v])=>({id,...v,
+    es:EMOTIONAL_STATES.find(e=>e.id===id),
+    rate:v.acts+v.skips>0?v.acts/(v.acts+v.skips):0
+  })).sort((a,b)=>b.rate-a.rate);
+
+  let html=`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+    ${[
+      {l:'Consistência',v:`${consistency}%`,c:consistency>60?'var(--green)':consistency>40?'var(--gold)':'var(--red)'},
+      {l:'Total de reflexões',v:dec.length,c:'var(--blue)'},
+      {l:'Vezes que agiu',v:acts.length,c:'var(--green)'},
+      {l:'Padrão de evitação',v:skips.length,c:'var(--red)'},
+    ].map(s=>`<div class="card" style="text-align:center">
+      <div style="font-size:24px;font-weight:300;color:${s.c};margin-bottom:3px">${s.v}</div>
+      <div class="label">${s.l}</div>
+    </div>`).join('')}
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <p class="label" style="margin-bottom:14px">Atributos psicológicos</p>
+    ${ATTRIBUTES.map(a=>{
+      const val=STATE.attributes[a.id]||0;
+      const color=val>60?'var(--green)':val>30?'var(--gold)':'var(--red)';
+      return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:12px;width:18px">${a.icon}</span>
+        <span class="mono" style="font-size:10px;color:var(--text-mid);width:80px">${a.label}</span>
+        <div style="flex:1;height:3px;background:rgba(255,255,255,.04);border-radius:2px">
+          <div style="width:${val}%;height:100%;border-radius:2px;background:${color};transition:width 1s ease"></div>
+        </div>
+        <span class="mono" style="font-size:9px;color:var(--text-dim);width:20px;text-align:right">${val}</span>
+      </div>`;
+    }).join('')}
+  </div>
+  `;
+
+  if(emArr.length>0){
+    html+=`<div style="margin-bottom:18px">
+      <p class="label" style="margin-bottom:14px">Padrão emocional</p>
+      ${emArr.slice(0,3).map(e=>`
+        <div class="card" style="display:flex;align-items:center;gap:12px;margin-bottom:9px">
+          <span style="font-size:18px">${e.es?.emoji||'😐'}</span>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+              <span class="mono" style="font-size:11px;color:var(--text-mid)">${e.es?.label||e.id}</span>
+              <span class="mono" style="font-size:10px;color:${e.rate>0.6?'var(--green)':e.rate>0.4?'var(--gold)':'var(--red)'}">${Math.round(e.rate*100)}% ação</span>
+            </div>
+            <div style="height:2px;background:rgba(255,255,255,.04);border-radius:1px">
+              <div style="width:${e.rate*100}%;height:100%;border-radius:1px;background:${e.rate>0.6?'var(--green)':e.rate>0.4?'var(--gold)':'var(--red)'}"></div>
+            </div>
+          </div>
+        </div>`).join('')}
+      ${emArr[0]?`<p class="mono" style="font-size:11px;color:var(--text-mid);line-height:1.7;margin-top:8px">
+        Você age melhor quando está <strong style="color:${emArr[0].es?.color}">${emArr[0].es?.label?.toLowerCase()}</strong>.
+        ${emArr.length>1&&emArr[emArr.length-1].rate<0.4?' O padrão de evitação aumenta quando está '+emArr[emArr.length-1].es?.label?.toLowerCase()+'.':''}
+      </p>`:''}
+    </div>`;
+  }
+
+  html+=`<div>
+    <p class="label" style="margin-bottom:12px">Decisões recentes</p>
+    ${dec.slice(0,8).map(d=>`
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;
+        padding:10px 12px;background:rgba(255,255,255,.015);border-radius:10px">
+        <span style="font-size:14px">${d.icon}</span>
+        <div style="flex:1">
+          <span class="mono" style="font-size:11px;color:var(--text-mid)">${d.action}</span>
+          ${d.emotion?`<span class="mono" style="font-size:9px;color:var(--text-dim);margin-left:8px">· ${d.emotion}</span>`:''}
+        </div>
+        <span class="mono" style="font-size:11px;font-weight:500;color:${d.chose==='act'?'var(--green)':'var(--red)'}">
+          ${d.chose==='act'?'agiu':'adiou'}
+        </span>
+      </div>`).join('')}
+  </div>`;
+
+  el.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MEMORY SCREEN
+// ═══════════════════════════════════════════════════════════════
+function renderMemory(){
+  const list=document.getElementById('memory-list');
+  const mems=STATE.memories;
+  if(mems.length===0){
+    list.innerHTML=`<div style="text-align:center;padding:32px 0">
+      <p class="mono" style="font-size:11px;color:var(--text-dim);line-height:1.8">
+        Nenhuma memória ainda.<br>Suas reflexões aparecerão aqui.
+      </p></div>`;
+    return;
+  }
+  list.innerHTML=`<p class="label" style="margin-bottom:14px">${mems.length} memória${mems.length>1?'s':''}</p>
+  ${mems.map((m,i)=>`
+    <div class="fu" style="animation-delay:${i*.04}s;border-left:2px solid ${m.type==='identity'?'rgba(200,168,75,.4)':m.type==='reflection'?'rgba(91,141,238,.3)':'rgba(255,255,255,.1)'};
+      border-radius:0 12px 12px 0;padding:14px 16px;margin-bottom:10px;background:rgba(255,255,255,.02)">
+      <p style="font-size:13px;color:var(--text-mid);line-height:1.7;font-style:italic;margin-bottom:8px">"${escHtml(m.text)}"</p>
+      <div style="display:flex;gap:10px">
+        <span class="mono" style="font-size:9px;color:var(--text-dim)">${m.date}</span>
+        <span class="mono" style="font-size:9px;color:var(--text-dim);text-transform:uppercase">
+          ${m.type==='identity'?'identidade':m.type==='reflection'?'reflexão':'nota'}
+        </span>
+      </div>
+    </div>`).join('')}`;
+}
+
+function saveMemory(){
+  const text=document.getElementById('memory-input').value.trim();
+  if(!text) return;
+  addMemory(text,'manual');
+  document.getElementById('memory-input').value='';
+  const btn=document.getElementById('memory-save-btn');
+  btn.textContent='✓ SALVO';
+  btn.style.color='var(--green)';
+  btn.style.borderColor='rgba(78,203,141,.3)';
+  setTimeout(()=>{btn.textContent='SALVAR';btn.style.color='';btn.style.borderColor='';},2000);
+  renderMemory();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MEMORY HELPERS
+// ═══════════════════════════════════════════════════════════════
+function addMemory(text, type='manual'){
+  STATE.memories.unshift({
+    id: Date.now(),
+    text,
+    type,
+    date: new Date().toLocaleDateString('pt-BR'),
+    ts: Date.now(),
+  });
+  if(STATE.memories.length>50) STATE.memories=STATE.memories.slice(0,50);
+  saveState();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+function hexToRgb(hex){
+  if(!hex||!hex.startsWith('#')) return '128,128,128';
+  const r=parseInt(hex.slice(1,3),16)||128;
+  const g=parseInt(hex.slice(3,5),16)||128;
+  const b=parseInt(hex.slice(5,7),16)||128;
+  return `${r},${g},${b}`;
+}
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════════════
+// INSTALL BANNER (iOS Safari)
+// ═══════════════════════════════════════════════════════════════
+function closeBanner(){
+  STATE.installBannerDismissed=true;
+  saveState();
+  document.getElementById('install-banner').style.display='none';
+}
+
+function checkInstallPrompt(){
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  if(isIOS && !isStandalone && !STATE.installBannerDismissed){
+    setTimeout(()=>{
+      document.getElementById('install-banner').style.display='block';
+    },3000);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SERVICE WORKER (offline support)
+// ═══════════════════════════════════════════════════════════════
+if('serviceWorker' in navigator){
+  const swCode = `
+const CACHE='equilibrium-v1';
+const ASSETS=[self.location.href];
+self.addEventListener('install',e=>e.waitUntil(
+  caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())
+));
+self.addEventListener('activate',e=>e.waitUntil(
+  caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+  .then(()=>self.clients.claim())
+));
+self.addEventListener('fetch',e=>e.respondWith(
+  caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match(e.request)))
+));`;
+  const swBlob=new Blob([swCode],{type:'application/javascript'});
+  const swURL=URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swURL).catch(()=>{});
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  checkInstallPrompt();
+
+  // If returning user with saved state, go to home
+  if(STATE.emotionalState && STATE.decisions.length>0){
+    renderHome();
+    showScreen('home');
+  } else if(STATE.emotionalState){
+    renderHome();
+    showScreen('home');
+  } else {
+    showScreen('entry');
+  }
+
+  // Populate emotional screen
+  renderEmotional();
+  if(STATE.emotionalState){
+    const nextBtn=document.getElementById('btn-emotion-next');
+    nextBtn.style.opacity='1';
+    nextBtn.style.pointerEvents='auto';
+  }
+});
+
+// Prevent double-tap zoom on iOS
+document.addEventListener('touchend', e => {
+  if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'){
+    e.preventDefault();
+    e.target.click && e.target.click();
+  }
+}, {passive:false});
+</script>
+</body>
+</html>
